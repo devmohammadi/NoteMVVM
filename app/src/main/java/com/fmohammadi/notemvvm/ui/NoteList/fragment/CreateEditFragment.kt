@@ -80,7 +80,7 @@ class CreateEditFragment() : Fragment() {
             }
 
             cancel.setOnClickListener {
-                saveItem = NoteItem(title!!, notes!!, System.currentTimeMillis())
+                saveItem = NoteItem(title!!, notes!!, bundle!!.getString(KEY_LONG_MODIFY)!!.toLong())
                 viewModel.insert(saveItem!!)
                 findNavController().popBackStack()
             }

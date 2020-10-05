@@ -17,8 +17,15 @@ import com.fmohammadi.notemvvm.ui.NoteList.NoteViewModel
 import com.fmohammadi.notemvvm.ui.NoteList.NoteViewModelFactory
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.android.synthetic.main.fragment_note_list.view.*
+import org.kodein.di.Kodein
+import org.kodein.di.KodeinAware
+import org.kodein.di.android.x.closestKodein
+import org.kodein.di.generic.instance
 
-class NoteListFragment : Fragment() {
+class NoteListFragment : Fragment(),KodeinAware {
+
+    override val kodein: Kodein by closestKodein()
+    private val factory: NoteViewModelFactory by instance()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -26,10 +33,6 @@ class NoteListFragment : Fragment() {
     ): View? {
         // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_note_list, container, false)
-
-        val database = NoteDatabase(view.context)
-        val repository = NoteRepository(database)
-        val factory = NoteViewModelFactory(repository)
 
         val viewModel: NoteViewModel =
             ViewModelProviders.of(requireActivity(), factory).get(NoteViewModel::class.java)

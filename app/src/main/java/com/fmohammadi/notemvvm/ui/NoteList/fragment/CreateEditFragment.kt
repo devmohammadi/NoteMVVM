@@ -1,7 +1,6 @@
 package com.fmohammadi.notemvvm.ui.NoteList.fragment
 
 import android.os.Bundle
-import android.provider.Contacts.SettingsColumns.KEY
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,13 +8,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import com.fmohammadi.notemvvm.Data.db.NoteDatabase
 import com.fmohammadi.notemvvm.Data.db.entities.NoteItem
-import com.fmohammadi.notemvvm.Data.repositories.NoteRepository
 import com.fmohammadi.notemvvm.R
-import com.fmohammadi.notemvvm.other.NoteItemAdapter
 import com.fmohammadi.notemvvm.other.NoteItemAdapter.Companion.KEY_ID
 import com.fmohammadi.notemvvm.other.NoteItemAdapter.Companion.KEY_LONG_MODIFY
 import com.fmohammadi.notemvvm.other.NoteItemAdapter.Companion.KEY_MODIFY
@@ -25,8 +20,16 @@ import com.fmohammadi.notemvvm.ui.NoteList.NoteViewModel
 import com.fmohammadi.notemvvm.ui.NoteList.NoteViewModelFactory
 import kotlinx.android.synthetic.main.fragment_create_edit.*
 import kotlinx.android.synthetic.main.fragment_create_edit.view.*
+import org.kodein.di.Kodein
+import org.kodein.di.KodeinAware
+import org.kodein.di.android.x.closestKodein
+import org.kodein.di.generic.instance
 
-class CreateEditFragment() : Fragment() {
+class CreateEditFragment() : Fragment(), KodeinAware {
+
+    override val kodein: Kodein by closestKodein()
+    private val factory: NoteViewModelFactory by instance()
+
     private var bundle: Bundle? = null
     private var title: String? = null
     private var notes: String? = null
@@ -41,9 +44,6 @@ class CreateEditFragment() : Fragment() {
         // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_create_edit, container, false)
 
-        val database = NoteDatabase(view.context)
-        val repository = NoteRepository(database)
-        val factory = NoteViewModelFactory(repository)
 
         val viewModel: NoteViewModel =
             ViewModelProviders.of(requireActivity(), factory).get(NoteViewModel::class.java)
@@ -66,21 +66,13 @@ class CreateEditFragment() : Fragment() {
             view.tvModify.text = "$modify"
 
             save.setOnClickListener {
-                title = etTitle.text.trim().toString()
-                notes = etNotes.text.trim().toString()
-
-                if (title!!.isEmpty() || notes!!.isEmpty()) {
-                    Toast.makeText(view.context, "Please Enter A Note", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                saveItem = NoteItem(title!!, notes!!, System.currentTimeMillis())
-                viewModel.insert(saveItem!!)
+                if (saveNote(view, viewModel)) return@setOnClickListener
                 findNavController().popBackStack()
             }
 
             cancel.setOnClickListener {
-                saveItem = NoteItem(title!!, notes!!, bundle!!.getString(KEY_LONG_MODIFY)!!.toLong())
+                saveItem =
+                    NoteItem(title!!, notes!!, bundle!!.getString(KEY_LONG_MODIFY)!!.toLong())
                 viewModel.insert(saveItem!!)
                 findNavController().popBackStack()
             }
@@ -106,5 +98,35 @@ class CreateEditFragment() : Fragment() {
         }
 
         return view
+    }
+
+
+    private fun saveNote(view: View, viewModel: NoteViewModel): Boolean {
+        title = etTitle.text.trim().toString()
+        notes = etNotes.text.trim().toString()
+
+        if (title!!.isEmpty() || notes!!.isEmpty()) {
+            Toast.makeText(view.context, "Please Enter A Note", Toast.LENGTH_SHORT).show()
+            return true
+        }
+
+        saveItem = NoteItem(title!!, notes!!, System.currentTimeMillis())
+        viewModel.insert(saveItem!!)
+        return false
+    }
+
+    override fun onPause() {
+        title = etTitle.text.trim().toString()
+        notes = etNotes.text.trim().toString()
+
+        val viewModel: NoteViewModel =
+            ViewModelProviders.of(requireActivity(), factory).get(NoteViewModel::class.java)
+
+
+        if (!(title!!.isEmpty() && notes!!.isEmpty())) {
+            saveItem = NoteItem(title!!, notes!!, System.currentTimeMillis())
+            viewModel.insert(saveItem!!)
+        }
+        super.onPause()
     }
 }
